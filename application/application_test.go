@@ -44,9 +44,10 @@ func TestApplicationStart(t *testing.T) {
 }
 
 // replayConn returns a connection to a device that is running the default
-// media receiver with a media in the given player state. Everything sent
-// that isn't a status request ends up in sent.
-func replayConn(t *testing.T, playerState string, sent *[]cast.Payload) *mockCast.Conn {
+// media receiver with a media in the given player state, or with no media
+// if the player state is empty. Everything sent that isn't a status request
+// ends up in sent.
+func replayConn(t *testing.T, playerState *string, sent *[]cast.Payload) *mockCast.Conn {
 	recvChan := make(chan *pb.CastMessage, 5)
 	reply := func(requestID int, response interface{}) {
 		payloadBytes, err := json.Marshal(response)
@@ -84,15 +85,16 @@ func replayConn(t *testing.T, playerState string, sent *[]cast.Payload) *mockCas
 				reply(args.Int(0), response)
 				return
 			}
-			reply(args.Int(0), &cast.MediaStatusResponse{
-				PayloadHeader: responseHeader,
-				Status: []cast.Media{{
+			response := &cast.MediaStatusResponse{PayloadHeader: responseHeader}
+			if *playerState != "" {
+				response.Status = []cast.Media{{
 					MediaSessionId: 7,
-					PlayerState:    playerState,
+					PlayerState:    *playerState,
 					CurrentTime:    42,
 					Media:          cast.MediaItem{ContentId: "http://foo.bar/video.mp4", ContentType: "video/mp4", StreamType: "BUFFERED"},
-				}},
-			})
+				}}
+			}
+			reply(args.Int(0), response)
 		}).Return(nil)
 	return conn
 }
@@ -102,7 +104,8 @@ func TestApplicationReplay(t *testing.T) {
 		assertions := require.New(t)
 
 		var sent []cast.Payload
-		app := application.NewApplication(application.WithConnection(replayConn(t, "PLAYING", &sent)))
+		playerState := "PLAYING"
+		app := application.NewApplication(application.WithConnection(replayConn(t, &playerState, &sent)))
 		assertions.NoError(app.Start(mockAddr, mockPort))
 		assertions.NoError(app.Replay())
 
@@ -115,12 +118,31 @@ func TestApplicationReplay(t *testing.T) {
 		assertions.Equal("PLAYBACK_START", seek.ResumeState)
 	})
 
-	t.Run("loads the media again when it has finished", func(t *testing.T) {
+	t.Run("loads the media again when it is idle", func(t *testing.T) {
 		assertions := require.New(t)
 
 		var sent []cast.Payload
-		app := application.NewApplication(application.WithConnection(replayConn(t, "IDLE", &sent)))
+		playerState := "IDLE"
+		app := application.NewApplication(application.WithConnection(replayConn(t, &playerState, &sent)))
 		assertions.NoError(app.Start(mockAddr, mockPort))
+		assertions.NoError(app.Replay())
+
+		assertions.Len(sent, 1)
+		load, ok := sent[0].(*cast.LoadMediaCommand)
+		assertions.True(ok)
+		assertions.Equal("http://foo.bar/video.mp4", load.Media.ContentId)
+	})
+
+	t.Run("loads the media again when it has finished and there is no status", func(t *testing.T) {
+		assertions := require.New(t)
+
+		var sent []cast.Payload
+		playerState := "PLAYING"
+		app := application.NewApplication(application.WithConnection(replayConn(t, &playerState, &sent)))
+		assertions.NoError(app.Start(mockAddr, mockPort))
+
+		// The media finishes: the device doesn't report it anymore.
+		playerState = ""
 		assertions.NoError(app.Replay())
 
 		assertions.Len(sent, 1)

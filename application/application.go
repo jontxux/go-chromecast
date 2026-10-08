@@ -561,17 +561,29 @@ func (a *Application) Replay() error {
 		return ErrNoMediaReplay
 	}
 
-	// Get the latest media status. When the media has finished the status
-	// can come back empty, in which case we keep the last one we had.
-	a.updateMediaStatus()
+	// Get the latest media status. Once the media has finished the status
+	// comes back empty: there is nothing to seek on anymore, but we still
+	// have the last media we knew about to load it again.
+	a.sendMediaConn(&cast.ConnectHeader)
+	mediaStatus, err := a.getMediaStatus()
+	if err != nil {
+		return err
+	}
+	loaded := len(mediaStatus.Status) > 0
+	for _, media := range mediaStatus.Status {
+		a.media = &media
+		a.volumeMedia = &media.Volume
+	}
 
 	isYouTube := a.application.AppId == youtube.AppID
-	switch a.media.PlayerState {
-	case "PLAYING", "BUFFERING", "PAUSED":
-		// Once a video has ended the YouTube app leaves it cued and
-		// ignores any seek, so it has to be loaded again.
-		if !isYouTube || !youtubeHasEnded(a.media.CustomData.PlayerState) {
-			return a.SeekToTime(0)
+	if loaded {
+		switch a.media.PlayerState {
+		case "PLAYING", "BUFFERING", "PAUSED":
+			// Once a video has ended the YouTube app leaves it cued
+			// and ignores any seek, so it has to be loaded again.
+			if !isYouTube || !youtubeHasEnded(a.media.CustomData.PlayerState) {
+				return a.SeekToTime(0)
+			}
 		}
 	}
 
