@@ -128,6 +128,7 @@ type Application struct {
 	httpServer *http.ServeMux
 	serverPort int
 	localIP    string
+	ffmpegArgs []string
 	iface      *net.Interface
 
 	// NOTE: Currently only playing one media file at a time is handled
@@ -184,6 +185,14 @@ func WithDebug(debug bool) ApplicationOption {
 func WithCacheDisabled(cacheDisabled bool) ApplicationOption {
 	return func(a *Application) {
 		a.SetCacheDisabled(cacheDisabled)
+	}
+}
+
+// WithFfmpegArgs sets extra arguments to pass to ffmpeg when transcoding.
+// They go after the default ones, so they can override them.
+func WithFfmpegArgs(args []string) ApplicationOption {
+	return func(a *Application) {
+		a.ffmpegArgs = args
 	}
 }
 
@@ -1295,9 +1304,11 @@ func (a *Application) startStreamingServer() error {
 	return nil
 }
 
-func (a *Application) serveLiveStreaming(w http.ResponseWriter, r *http.Request, filename string) {
-	cmd := exec.Command(
-		"ffmpeg",
+// transcodeArgs returns the arguments for ffmpeg to transcode filename to
+// mp4 and write it to stdout. extraArgs are added after the default output
+// options, so they can add to them or override them.
+func transcodeArgs(filename string, extraArgs []string) []string {
+	args := []string{
 		"-re", // encode at 1x playback speed, to not burn the CPU
 		"-i", filename,
 		"-vcodec", "h264",
@@ -1306,8 +1317,13 @@ func (a *Application) serveLiveStreaming(w http.ResponseWriter, r *http.Request,
 		"-f", "mp4",
 		"-movflags", "frag_keyframe+faststart",
 		"-strict", "-experimental",
-		"pipe:1",
-	)
+	}
+	args = append(args, extraArgs...)
+	return append(args, "pipe:1")
+}
+
+func (a *Application) serveLiveStreaming(w http.ResponseWriter, r *http.Request, filename string) {
+	cmd := exec.Command("ffmpeg", transcodeArgs(filename, a.ffmpegArgs)...)
 
 	cmd.Stdout = w
 	if a.debug {

@@ -18,6 +18,8 @@ Supported Media formats:
 ```
 
 If an unknown video file is found, it will use `ffmpeg` to transcode it to MP4 and stream it to the chromecast.
+Extra arguments can be passed to `ffmpeg` with `--ffmpeg-args` (on the `load` and `playlist` commands), ie:
+`--ffmpeg-args "-vn"` to send only the audio, or `--ffmpeg-args "-map 0:v -map 0:a:1"` to choose the second audio track.
 
 ## Play Local Media Files
 
@@ -103,6 +105,7 @@ Flags:
   -h, --help                 help for go-chromecast
   -i, --iface string         Network interface to use when looking for a local address to use for the http server or for use with multicast dns discovery
   -p, --port string          Port of the chromecast device if 'addr' is specified (default "8009")
+      --ui-hide-log          hide the log in the UI
   -u, --uuid string          chromecast device uuid
       --verbose              verbose logging
       --version              display command version
@@ -271,6 +274,14 @@ Use the UI in combination with the `load` command (detailed above):
 
 ```
 $ go-chromecast --with-ui load /path/to/file.flac
+```
+
+### Hiding the log
+
+The log takes most of the UI. It can be hidden with the `--ui-hide-log` flag:
+
+```
+$ go-chromecast ui --ui-hide-log
 ```
 
 ## HTTP API Server

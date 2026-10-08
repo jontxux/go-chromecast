@@ -63,6 +63,7 @@ func castApplication(cmd *cobra.Command, args []string) (application.App, error)
 	serverAddr, _ := cmd.Flags().GetString("server-addr")
 	dnsTimeoutSeconds, _ := cmd.Flags().GetInt("dns-timeout")
 	useFirstDevice, _ := cmd.Flags().GetBool("first")
+	ffmpegArgs, _ := cmd.Flags().GetString("ffmpeg-args")
 
 	// Used to try and reconnect
 	if deviceUuid == "" && entry != nil {
@@ -78,6 +79,7 @@ func castApplication(cmd *cobra.Command, args []string) (application.App, error)
 		application.WithServerPort(serverPort),
 		application.WithDebug(debug),
 		application.WithCacheDisabled(disableCache),
+		application.WithFfmpegArgs(strings.Fields(ffmpegArgs)),
 	}
 
 	if serverAddr != "" {

@@ -213,7 +213,7 @@ that ffmpeg is installed.`,
 				}
 			}()
 
-			ccui, err := ui.NewUserInterface(app)
+			ccui, err := ui.NewUserInterface(app, uiOptions(cmd)...)
 			if err != nil {
 				exit("unable to prepare a new user-interface: %v", err)
 			}
@@ -234,6 +234,7 @@ func init() {
 	playlistCmd.Flags().Bool("select", false, "choose which media to start the playlist from")
 	playlistCmd.Flags().Int("start-index", 0, "start the playlist from this item (starting at 1), without asking; the items are numbered as shown by --select")
 	playlistCmd.Flags().Bool("transcode", true, "transcode the media to mp4 if media type is unrecognised")
+	playlistCmd.Flags().String("ffmpeg-args", "", "extra arguments to pass to ffmpeg when transcoding, ie: '-vn' or '-map 0:v -map 0:a:1'")
 	playlistCmd.Flags().Bool("force-play", false, "attempt to play a media type even if it is unrecognised")
 	playlistCmd.Flags().StringP("content-type", "c", "", "content-type to serve the media file as")
 }
