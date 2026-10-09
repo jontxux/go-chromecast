@@ -15,6 +15,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/vishen/go-chromecast/ui"
 
 	"github.com/spf13/cobra"
@@ -48,6 +50,34 @@ func uiOptions(cmd *cobra.Command) []ui.Option {
 	return []ui.Option{
 		ui.WithLogHidden(hideLog),
 	}
+}
+
+// setUITheme sets the colours of the UI from the file of the --ui-theme flag
+// or, without it, from the default theme file if there is one.
+func setUITheme(cmd *cobra.Command) error {
+	// Don't bother (or fail because of a broken theme) without a UI:
+	runWithUI, _ := cmd.Flags().GetBool("with-ui")
+	if cmd != uiCmd && !runWithUI {
+		return nil
+	}
+
+	path, _ := cmd.Flags().GetString("ui-theme")
+	if path == "" {
+		defaultPath, err := ui.DefaultThemePath()
+		if err != nil {
+			return nil
+		}
+		if _, err := os.Stat(defaultPath); err != nil {
+			return nil
+		}
+		path = defaultPath
+	}
+
+	theme, err := ui.LoadTheme(path)
+	if err != nil {
+		return err
+	}
+	return ui.SetTheme(theme)
 }
 
 func init() {
