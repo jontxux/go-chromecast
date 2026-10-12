@@ -18,9 +18,9 @@ Supported Media formats:
 ```
 
 If an unknown video file is found, it will use `ffmpeg` to transcode it to MP4 and stream it to the chromecast.
+With `--transcode=false` the file is sent as it is, whatever it is, and it is up to the chromecast to play it.
 Extra arguments can be passed to `ffmpeg` with `--ffmpeg-args` (on the `load` and `playlist` commands), ie:
 `--ffmpeg-args "-vn"` to send only the audio, or `--ffmpeg-args "-map 0:v -map 0:a:1"` to choose the second audio track.
-With `--transcode=false` the file is sent as it is, whatever it is, and it is up to the chromecast to play it.
 
 ## Play Local Media Files
 
@@ -106,8 +106,8 @@ Flags:
   -h, --help                 help for go-chromecast
   -i, --iface string         Network interface to use when looking for a local address to use for the http server or for use with multicast dns discovery
   -p, --port string          Port of the chromecast device if 'addr' is specified (default "8009")
-      --ui-hide-log          hide the log in the UI
   -u, --uuid string          chromecast device uuid
+      --ui-hide-log          hide the log in the UI
       --ui-theme string      file with the colours of the UI (default "go-chromecast/theme.json" in the user config directory, if it exists)
       --verbose              verbose logging
       --version              display command version
@@ -161,6 +161,13 @@ $ go-chromecast youtube --next https://youtu.be/dQw4w9WgXcQ
 # Load a local media file (can play both audio and video).
 $ go-chromecast load ~/Downloads/SampleAudio_0.4mb.mp3
 
+# Load a video with subtitles. They can be a WebVTT file (or its url), or any
+# other file that ffmpeg can convert to WebVTT: srt, ass, or a video with
+# embedded subtitles (the first ones, or the ones chosen with --subtitles-track).
+$ go-chromecast load ~/Downloads/video.mp4 --subtitles ~/Downloads/video.srt
+$ go-chromecast load ~/Downloads/video.mkv --subtitles ~/Downloads/video.mkv
+$ go-chromecast load ~/Downloads/video.mkv --subtitles ~/Downloads/video.mkv --subtitles-track 2
+
 # Load media from stdin. It is transcoded to mp4 with ffmpeg, unless a
 # content-type is given, in which case it is sent as it is.
 $ cat ~/Downloads/video.mkv | go-chromecast load -
@@ -169,13 +176,6 @@ $ cat ~/Downloads/video.mkv | go-chromecast load -
 # wf-recorder on wayland. Expect a delay of several seconds: the chromecast
 # buffers some of the video before it starts playing.
 $ wf-recorder -y -D -r 30 -m mpegts -f /dev/stdout | go-chromecast load -
-
-# Load a video with subtitles. They can be a WebVTT file (or its url), or any
-# other file that ffmpeg can convert to WebVTT: srt, ass, or a video with
-# embedded subtitles (the first ones, or the ones chosen with --subtitles-track).
-$ go-chromecast load ~/Downloads/video.mp4 --subtitles ~/Downloads/video.srt
-$ go-chromecast load ~/Downloads/video.mkv --subtitles ~/Downloads/video.mkv
-$ go-chromecast load ~/Downloads/video.mkv --subtitles ~/Downloads/video.mkv --subtitles-track 2
 Found 2 cast dns entries, select one:
 1) device="Chromecast" device_name="MarieGotGame?" address="192.168.0.115:8009" status="" uuid="b380c5847b3182e4fb2eb0d0e270bf16"
 2) device="Google Home Mini" device_name="Living Room Speaker" address="192.168.0.52:8009" status="" uuid="b87d86bed423a6feb8b91a7d2778b55c"
@@ -294,14 +294,6 @@ Use the UI in combination with the `load` command (detailed above):
 $ go-chromecast --with-ui load /path/to/file.flac
 ```
 
-### Hiding the log
-
-The log takes most of the UI. It can be hidden with the `--ui-hide-log` flag:
-
-```
-$ go-chromecast ui --ui-hide-log
-```
-
 ### Colours
 
 The colours of the UI can be changed with a theme, a JSON file like this one (these are the default colours):
@@ -329,6 +321,14 @@ exists, or from the file given with `--ui-theme`:
 
 ```
 $ go-chromecast ui --ui-theme /path/to/theme.json
+```
+
+### Hiding the log
+
+The log takes most of the UI. It can be hidden with the `--ui-hide-log` flag:
+
+```
+$ go-chromecast ui --ui-hide-log
 ```
 
 ## HTTP API Server

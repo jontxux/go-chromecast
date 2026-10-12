@@ -44,14 +44,6 @@ var uiCmd = &cobra.Command{
 	},
 }
 
-// uiOptions returns the options of the UI that were set with flags:
-func uiOptions(cmd *cobra.Command) []ui.Option {
-	hideLog, _ := cmd.Flags().GetBool("ui-hide-log")
-	return []ui.Option{
-		ui.WithLogHidden(hideLog),
-	}
-}
-
 // setUITheme sets the colours of the UI from the file of the --ui-theme flag
 // or, without it, from the default theme file if there is one.
 func setUITheme(cmd *cobra.Command) error {
@@ -78,6 +70,14 @@ func setUITheme(cmd *cobra.Command) error {
 		return err
 	}
 	return ui.SetTheme(theme)
+}
+
+// uiOptions returns the options of the UI that were set with flags:
+func uiOptions(cmd *cobra.Command) []ui.Option {
+	hideLog, _ := cmd.Flags().GetBool("ui-hide-log")
+	return []ui.Option{
+		ui.WithLogHidden(hideLog),
+	}
 }
 
 func init() {
